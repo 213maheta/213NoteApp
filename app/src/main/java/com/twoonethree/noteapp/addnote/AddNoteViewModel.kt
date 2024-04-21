@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,12 +16,14 @@ import kotlinx.coroutines.launch
 
 class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
 
+    val noteTitle = mutableStateOf("")
     val noteDescription = mutableStateOf("")
-    val noteBackgroundColor = mutableStateOf(Color.White)
-    val noteFontSize = mutableStateOf(24f)
+    val noteBackgroundColor = mutableStateOf(0)
     val toastMessage = mutableStateOf("")
+    val showColorSheet = mutableStateOf(false)
 
-    val onBackColorSelect = {selectedColor:Color -> noteBackgroundColor.value = selectedColor}
+    val onBackColorSelect = {selectedColor:Int -> noteBackgroundColor.value = selectedColor}
+    val changeColorSheet = {value:Boolean -> showColorSheet.value = value}
 
     fun addNote()
     {
@@ -32,7 +35,9 @@ class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             noteRepository.addNote(NoteModel(
                 primaryKey = System.currentTimeMillis(),
-                noteDescription = noteDescription.value
+                noteTitle = noteTitle.value,
+                noteDescription = noteDescription.value,
+                backColor = noteBackgroundColor.value
             ))
         }
         showToast("Note added successfully")
@@ -42,5 +47,7 @@ class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
     {
         toastMessage.value = message
     }
+
+
 
 }
