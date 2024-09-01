@@ -31,13 +31,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.twoonethree.noteapp.composeutils.ColorBottomSheet
+import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.utils.ColorProvider
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun AddNoteScreen(addNoteVM: AddNoteViewModel = koinViewModel()) {
+fun AddNoteScreen(addNoteVM : AddNoteViewModel = koinViewModel(), noteModel: NoteModel?) {
 
     val context = LocalContext.current
+
+    LaunchedEffect(key1 = Unit) {
+        noteModel?.let {
+            addNoteVM.updateNewModel = it
+            addNoteVM.noteTitle.value = it.noteTitle
+            addNoteVM.noteDescription.value = it.noteDescription
+            addNoteVM.noteBackgroundColor.value = it.backColor
+
+        }
+    }
+
 
     LaunchedEffect(addNoteVM.toastMessage.value) {
         if (addNoteVM.toastMessage.value.isNotEmpty()) {

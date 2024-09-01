@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     id("org.jetbrains.kotlin.kapt")
+    id ("kotlin-parcelize")
 }
 
 android {
@@ -15,10 +16,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+
     }
 
     buildTypes {
@@ -69,7 +67,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     
     //navigation
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation(libs.androidx.navigation.compose)
 
     //koin
     implementation("io.insert-koin:koin-android:3.5.6")
@@ -83,5 +81,9 @@ dependencies {
 
     // To use Kotlin Symbol Processing (KSP)
     kapt("androidx.room:room-compiler:$room_version")
+
+    //Gson
+    implementation(libs.gson)
+
 
 }

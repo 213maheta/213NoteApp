@@ -1,10 +1,13 @@
 package com.twoonethree.noteapp.homescreen
 
-import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,26 +17,38 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.toColor
-import androidx.core.graphics.toColorInt
-import androidx.core.graphics.toColorLong
-import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.utils.ColorProvider
+import com.twoonethree.noteapp.utils.ScreenName
+import com.twoonethree.noteapp.utils.toJson
 
 @Composable
 fun HomeScreen(navigateTo: (String) -> Unit, noteViewModel: HomeViewModel) {
@@ -41,21 +56,25 @@ fun HomeScreen(navigateTo: (String) -> Unit, noteViewModel: HomeViewModel) {
         noteViewModel.getAllNotes()
     }
 
+    val onSortClick = {noteViewModel.showSortDialog.value = !noteViewModel.showSortDialog.value}
 
     Box(modifier = Modifier.fillMaxSize())
     {
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            )
+            TopBar(
+                deleteNote = { noteViewModel.deleteNote() },
+                isLongPress = noteViewModel.isLongPress,
+                onSortClick
+                )
+
+            Box(modifier = Modifier.fillMaxSize())
             {
-                NoteListView(noteViewModel.noteList)
+                NoteListView(noteViewModel.noteList, noteViewModel.isLongPress, navigateTo)
             }
         }
 
         FloatingActionButton(
-            onClick = { navigateTo("AddNoteScreen") },
+            onClick = { navigateTo(ScreenName.AddNoteScreen) },
             shape = RectangleShape,
             containerColor = Color.Red,
             contentColor = Color.White,
@@ -65,30 +84,117 @@ fun HomeScreen(navigateTo: (String) -> Unit, noteViewModel: HomeViewModel) {
         ) {
             Icon(Icons.Filled.Add, "")
         }
-    }
 
-}
-
-@Composable
-fun NoteListView(noteList: List<NoteModel>) {
-    LazyVerticalGrid(modifier = Modifier.fillMaxSize(), columns = GridCells.Fixed(2)) {
-        items(noteList) {
-            NoteItem(it)
+        if(noteViewModel.showSortDialog.value)
+        {
+            BottomSheetContent(onSortClick)
         }
     }
 }
 
 @Composable
-fun NoteItem(noteModel: NoteModel) {
-    Log.e("TAG", "NoteItem: ${noteModel.backColor}", )
+fun TopBar(
+    deleteNote: () -> Unit,
+    isLongPress: MutableState<Boolean>,
+    showSortDialog: () -> Unit
+)
+{
+    Row(verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.08f)
+
+    ) {
+
+        IconButton(onClick = {showSortDialog()}) {
+            Icon(
+                imageVector = Icons.Default.List,
+                contentDescription = "Delete",
+                tint = Color.Red
+            )
+        }
+
+        AnimatedVisibility(visible = isLongPress.value) {
+            Row{
+                IconButton(onClick = {deleteNote()}) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.Red
+                    )
+                }
+
+                IconButton(onClick = {isLongPress.value = false}) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Delete",
+                        tint = Color.Red
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NoteListView(
+    noteList: List<NoteModel>,
+    onLongPress: MutableState<Boolean>,
+    navigate: (String) -> Unit
+) {
+
+    if(noteList.isEmpty())
+    {
+        Box(modifier = Modifier.fillMaxSize())
+        {
+            Text(text = "No Notes", modifier = Modifier.align(Alignment.Center))
+        }
+        return
+    }
+
+    LazyVerticalGrid(modifier = Modifier.fillMaxSize(), columns = GridCells.Fixed(2)) {
+        items(noteList, key = { it.primaryKey }) {
+            NoteItem(it, onLongPress, navigate)
+        }
+    }
+}
+
+@Composable
+fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate: (String) -> Unit) {
+
     Column(
         modifier = Modifier
             .padding(4.dp)
             .border(width = 2.dp, color = Color.Red, shape = RoundedCornerShape(4.dp))
             .background(color = colorResource(id = ColorProvider.colorList[noteModel.backColor]))
             .padding(4.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        onLongPress.value = !onLongPress.value
+                    },
+                    onPress = {
+
+                    }
+                )
+            },
     )
     {
+        val isSelected = remember { mutableStateOf(noteModel.isSelected) }
+
+        AnimatedVisibility(visible = onLongPress.value) {
+            Box(modifier = Modifier.fillMaxWidth())
+            {
+                Checkbox(
+                    checked = isSelected.value,
+                    onCheckedChange = { isChecked ->
+                        isSelected.value = isChecked
+                        noteModel.isSelected = isChecked
+                    }
+                , modifier = Modifier.align(Alignment.CenterEnd))
+            }
+        }
+
         Text(
             text = noteModel.noteTitle,
             textAlign = TextAlign.Start,
@@ -106,6 +212,32 @@ fun NoteItem(noteModel: NoteModel) {
             modifier = Modifier
                 .fillMaxWidth()
         )
+
+        IconButton(onClick = {navigate(ScreenName.AddNoteScreen + "/${toJson(noteModel)}")}) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Delete",
+                tint = Color.Red
+            )
+        }
+    }
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BottomSheetContent(onSortClick: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = {
+            onSortClick()
+        },
+        sheetState = sheetState
+    ) {
+
     }
 }
 

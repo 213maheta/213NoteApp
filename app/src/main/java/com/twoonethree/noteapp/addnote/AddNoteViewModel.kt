@@ -22,6 +22,8 @@ class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
     val toastMessage = mutableStateOf("")
     val showColorSheet = mutableStateOf(false)
 
+    var updateNewModel:NoteModel? = null
+
     val onBackColorSelect = {selectedColor:Int -> noteBackgroundColor.value = selectedColor}
     val changeColorSheet = {value:Boolean -> showColorSheet.value = value}
 
@@ -33,12 +35,20 @@ class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            noteRepository.addNote(NoteModel(
-                primaryKey = System.currentTimeMillis(),
-                noteTitle = noteTitle.value,
-                noteDescription = noteDescription.value,
-                backColor = noteBackgroundColor.value
-            ))
+            updateNewModel?.let {
+                noteRepository.updateNote(it.copy(
+                    noteTitle = noteTitle.value,
+                    noteDescription = noteDescription.value,
+                    backColor = noteBackgroundColor.value
+                ))
+            }?:run {
+                noteRepository.addNote(NoteModel(
+                    primaryKey = System.currentTimeMillis(),
+                    noteTitle = noteTitle.value,
+                    noteDescription = noteDescription.value,
+                    backColor = noteBackgroundColor.value
+                ))
+            }
         }
         showToast("Note added successfully")
     }
@@ -47,7 +57,4 @@ class AddNoteViewModel(val noteRepository: NoteRepository):ViewModel() {
     {
         toastMessage.value = message
     }
-
-
-
 }
