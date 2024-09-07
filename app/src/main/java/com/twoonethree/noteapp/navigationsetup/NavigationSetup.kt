@@ -6,8 +6,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.firebase.auth.FirebaseAuth
 import com.twoonethree.noteapp.homescreen.HomeViewModel
 import com.twoonethree.noteapp.addnote.AddNoteScreen
+import com.twoonethree.noteapp.authentication.MobileOTPLoginScreen
 import com.twoonethree.noteapp.homescreen.HomeScreen
 import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.utils.ScreenName
@@ -20,12 +22,17 @@ fun NavigationSetup()
     val navController = rememberNavController()
     val navigateTo = {route:String -> navController.navigate(route)}
     val noteViewModel: HomeViewModel = koinViewModel()
-    NavHost(navController = navController, startDestination = ScreenName.HomeScreen){
+
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+
+    val startDestination =  if(currentUser != null) ScreenName.HomeScreen else ScreenName.LogInScreem
+
+    NavHost(navController = navController, startDestination = startDestination){
         composable(route = ScreenName.HomeScreen)
         {
             HomeScreen(navigateTo, noteViewModel)
         }
-
         composable(
             route = "${ScreenName.AddNoteScreen}/{noteModel}",
             arguments = listOf(
@@ -40,6 +47,11 @@ fun NavigationSetup()
         composable(route = ScreenName.AddNoteScreen)
         {
             AddNoteScreen(noteModel = null)
+        }
+
+        composable(route = ScreenName.LogInScreem)
+        {
+            MobileOTPLoginScreen(navigateTo = navigateTo)
         }
     }
 }

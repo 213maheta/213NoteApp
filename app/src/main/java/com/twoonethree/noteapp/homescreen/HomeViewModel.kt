@@ -35,4 +35,35 @@ class HomeViewModel(val noteRepository: NoteRepository):ViewModel() {
             isLongPress.value = false
         }
     }
+
+    fun sortByName()
+    {
+        val sortedList = noteList.sortedBy {
+            it.noteTitle
+        }
+
+        noteList.clear()
+        noteList.addAll(sortedList)
+    }
+
+    fun sortByTimeDescending()
+    {
+        val sortedList = noteList.sortedByDescending {
+            it.noteTitle
+        }
+
+        noteList.clear()
+        noteList.addAll(sortedList)
+    }
+
+    fun sortByTimeAscending()
+    {
+        val sortedList = noteList.sortedBy {
+            it.noteTitle
+        }
+
+        noteList.clear()
+        noteList.addAll(sortedList)
+    }
+
 }

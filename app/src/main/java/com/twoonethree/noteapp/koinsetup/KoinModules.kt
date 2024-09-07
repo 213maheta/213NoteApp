@@ -4,6 +4,7 @@ import androidx.room.Room
 import com.twoonethree.noteapp.NoteRepository
 import com.twoonethree.noteapp.homescreen.HomeViewModel
 import com.twoonethree.noteapp.addnote.AddNoteViewModel
+import com.twoonethree.noteapp.authentication.AuthenticationViewModel
 import com.twoonethree.noteapp.roomsetup.MyRoomDatabase
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -30,4 +31,5 @@ val appModule = module {
 
     viewModel{ HomeViewModel(get()) }
     viewModel{ AddNoteViewModel(get()) }
+    viewModel{ AuthenticationViewModel() }
 }

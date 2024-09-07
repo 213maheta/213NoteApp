@@ -1,7 +1,9 @@
 package com.twoonethree.noteapp
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.twoonethree.noteapp.navigationsetup.NavigationSetup
@@ -22,5 +24,10 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
     }
+}
+
+
+fun Context.showToast(message: String) {
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 }
 
