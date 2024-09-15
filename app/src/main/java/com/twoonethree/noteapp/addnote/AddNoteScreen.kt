@@ -50,7 +50,6 @@ fun AddNoteScreen(addNoteVM : AddNoteViewModel = koinViewModel(), noteModel: Not
         }
     }
 
-
     LaunchedEffect(addNoteVM.toastMessage.value) {
         if (addNoteVM.toastMessage.value.isNotEmpty()) {
             Toast.makeText(context, addNoteVM.toastMessage.value, Toast.LENGTH_LONG).show()

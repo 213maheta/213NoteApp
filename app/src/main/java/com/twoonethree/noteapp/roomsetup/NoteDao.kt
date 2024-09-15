@@ -11,14 +11,20 @@ import com.twoonethree.noteapp.model.NoteModel
 interface NoteDao {
 
     @Query("SELECT * FROM NoteTable")
-    fun getAll(): List<NoteModel>
+    suspend fun getAll(): List<NoteModel>
 
     @Insert
-    fun add(note: NoteModel)
+    suspend fun add(note: NoteModel)
 
     @Delete
-    fun delete(items: List<NoteModel>)
+    suspend fun delete(items: List<NoteModel>)
 
     @Update
-    fun update(note: NoteModel)
+    suspend fun update(note: NoteModel)
+
+    @Query("UPDATE NoteTable SET isSynced = :isSynced WHERE primaryKey = :noteId")
+    suspend fun updateSyncStatus(noteId: Long, isSynced: Int)
+
+    @Query("SELECT * FROM NoteTable WHERE isSynced != 0")
+    suspend fun getAllNotesNotSynced(): List<NoteModel>
 }

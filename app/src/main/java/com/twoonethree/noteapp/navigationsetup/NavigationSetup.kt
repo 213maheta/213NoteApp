@@ -9,9 +9,12 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.twoonethree.noteapp.homescreen.HomeViewModel
 import com.twoonethree.noteapp.addnote.AddNoteScreen
-import com.twoonethree.noteapp.authentication.MobileOTPLoginScreen
+import com.twoonethree.noteapp.authentication.AuthenticationViewModel
+import com.twoonethree.noteapp.authentication.LoginScreen
+import com.twoonethree.noteapp.authentication.OTPScreen
 import com.twoonethree.noteapp.homescreen.HomeScreen
 import com.twoonethree.noteapp.model.NoteModel
+import com.twoonethree.noteapp.profile.ProfilePage
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.fromJson
 import org.koin.androidx.compose.koinViewModel
@@ -22,11 +25,12 @@ fun NavigationSetup()
     val navController = rememberNavController()
     val navigateTo = {route:String -> navController.navigate(route)}
     val noteViewModel: HomeViewModel = koinViewModel()
+    val authenticationViewModel: AuthenticationViewModel = koinViewModel()
 
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
 
-    val startDestination =  if(currentUser != null) ScreenName.HomeScreen else ScreenName.LogInScreem
+    val startDestination =  if(currentUser != null) ScreenName.HomeScreen else ScreenName.LogInScreen
 
     NavHost(navController = navController, startDestination = startDestination){
         composable(route = ScreenName.HomeScreen)
@@ -35,10 +39,9 @@ fun NavigationSetup()
         }
         composable(
             route = "${ScreenName.AddNoteScreen}/{noteModel}",
-            arguments = listOf(
-                navArgument("noteModel") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
+            arguments = listOf(navArgument("noteModel") { type = NavType.StringType })
+        )
+        { backStackEntry ->
             val message = backStackEntry.arguments?.getString("noteModel")
             val noteModel = fromJson<NoteModel>(message)
             AddNoteScreen(noteModel = noteModel)
@@ -49,9 +52,19 @@ fun NavigationSetup()
             AddNoteScreen(noteModel = null)
         }
 
-        composable(route = ScreenName.LogInScreem)
+        composable(route = ScreenName.LogInScreen)
         {
-            MobileOTPLoginScreen(navigateTo = navigateTo)
+            LoginScreen(vm = authenticationViewModel, navigateTo = navigateTo, )
+        }
+
+        composable(route = ScreenName.OTPScreen)
+        {
+            OTPScreen(vm = authenticationViewModel, navigateTo = navigateTo)
+        }
+
+        composable(route = ScreenName.ProfileScreen)
+        {
+            ProfilePage(navigateTo = navigateTo)
         }
     }
 }

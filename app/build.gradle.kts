@@ -85,6 +85,9 @@ dependencies {
     // To use Kotlin Symbol Processing (KSP)
     kapt("androidx.room:room-compiler:$room_version")
 
+    //Room-Coroutine
+    implementation("androidx.room:room-ktx:$room_version")
+
     //Gson
     implementation(libs.gson)
 
@@ -99,4 +102,7 @@ dependencies {
     // TODO: Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
     implementation("com.google.firebase:firebase-analytics")
+
+    // Firebase SDK for Firestore
+    implementation("com.google.firebase:firebase-firestore-ktx:24.3.0")
 }

@@ -4,7 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.twoonethree.noteapp.NoteRepository
+import com.twoonethree.noteapp.repository.NoteRepository
 import com.twoonethree.noteapp.model.NoteModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,6 +15,8 @@ class HomeViewModel(val noteRepository: NoteRepository):ViewModel() {
     val isLongPress = mutableStateOf(false)
 
     val showSortDialog = mutableStateOf(false)
+    val isDeleteDialogShow = mutableStateOf(false)
+
 
     fun getAllNotes(){
         viewModelScope.launch(Dispatchers.IO) {

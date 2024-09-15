@@ -8,3 +8,11 @@ sealed class Authentication(){
     object InvalidOTP:Authentication()
     object Empty:Authentication()
 }
+
+sealed class NoteEvent(){
+    object NoteAdded:NoteEvent()
+    object NoteUpdated:NoteEvent()
+    object NoteDeleted:NoteEvent()
+    object Empty:NoteEvent()
+    data class Failure(val message:String):NoteEvent()
+}

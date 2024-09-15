@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,15 +15,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,37 +46,58 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.twoonethree.noteapp.dialog.ConfirmActionDialog
 import com.twoonethree.noteapp.model.NoteModel
+import com.twoonethree.noteapp.sealed.Authentication
+import com.twoonethree.noteapp.sealed.NoteEvent
+import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ColorProvider
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.TimeUtils
 import com.twoonethree.noteapp.utils.toJson
 
 @Composable
-fun HomeScreen(navigateTo: (String) -> Unit, noteViewModel: HomeViewModel) {
+fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
     LaunchedEffect(Unit) {
-        noteViewModel.getAllNotes()
+        vm.getAllNotes()
     }
 
-    val onSortClick = {noteViewModel.showSortDialog.value = !noteViewModel.showSortDialog.value}
+    val context = LocalContext.current
+    
+    LaunchedEffect(key1 = vm.noteRepository.noteEvent.value) {
+        when(vm.noteRepository.noteEvent.value)
+        {
+            NoteEvent.NoteAdded -> { context.showToast("Note added successfully") }
+            NoteEvent.NoteDeleted -> { context.showToast("Note deleted successfully") }
+            NoteEvent.NoteUpdated -> { context.showToast("Note updated successfully") }
+            is NoteEvent.Failure -> { context.showToast((vm.noteRepository.noteEvent.value as NoteEvent.Failure).message) }
+            NoteEvent.Empty -> Unit
+        }
+        vm.noteRepository.noteEvent.value = NoteEvent.Empty
+    }
+
+    val onSortClick = {vm.showSortDialog.value = !vm.showSortDialog.value}
 
     Box(modifier = Modifier.fillMaxSize())
     {
         Column(modifier = Modifier.fillMaxSize()) {
             TopBar(
-                deleteNote = { noteViewModel.deleteNote() },
-                isLongPress = noteViewModel.isLongPress,
-                onSortClick
+                deleteNote = { vm.isDeleteDialogShow.value = true },
+                isLongPress = vm.isLongPress,
+                onSortClick,
+                navigateTo
                 )
 
             Box(modifier = Modifier.fillMaxSize())
             {
-                NoteListView(noteViewModel.noteList, noteViewModel.isLongPress, navigateTo)
+                NoteListView(vm.noteList, vm.isLongPress, navigateTo)
             }
         }
 
@@ -88,22 +113,30 @@ fun HomeScreen(navigateTo: (String) -> Unit, noteViewModel: HomeViewModel) {
             Icon(Icons.Filled.Add, "")
         }
 
-        if(noteViewModel.showSortDialog.value)
+        if(vm.showSortDialog.value)
         {
             BottomSheetContent(onSortClick,
-                noteViewModel::sortByName,
-                noteViewModel::sortByTimeDescending,
-                noteViewModel::sortByTimeAscending,
+                vm::sortByName,
+                vm::sortByTimeDescending,
+                vm::sortByTimeAscending,
                 )
         }
     }
+
+    if(vm.isDeleteDialogShow.value)
+    {
+        DeleteNoteDialog(onDelete = { vm.deleteNote() }, onDismiss = {vm.isDeleteDialogShow.value = false})
+    }
+
+
 }
 
 @Composable
 fun TopBar(
     deleteNote: () -> Unit,
     isLongPress: MutableState<Boolean>,
-    showSortDialog: () -> Unit
+    showSortDialog: () -> Unit,
+    navigateTo: (String) -> Unit
 )
 {
     Row(verticalAlignment = Alignment.CenterVertically,
@@ -120,6 +153,8 @@ fun TopBar(
                 tint = Color.Red
             )
         }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         AnimatedVisibility(visible = isLongPress.value) {
             Row{
@@ -139,6 +174,14 @@ fun TopBar(
                     )
                 }
             }
+        }
+
+        IconButton(onClick = {navigateTo(ScreenName.ProfileScreen)}) {
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = "Delete",
+                tint = Color.Red
+            )
         }
     }
 }
@@ -202,14 +245,27 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
             }
         }
 
-        Text(
-            text = noteModel.noteTitle,
-            textAlign = TextAlign.Start,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .fillMaxWidth()
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+            )
+        {
+            Text(
+                text = noteModel.noteTitle,
+                textAlign = TextAlign.Start,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+            )
+
+            Box(modifier = Modifier
+                .size(20.dp)
+                .background(
+                    color = if (noteModel.isSynced == 0) Color.Green else Color.Red,
+                    shape = CircleShape
+                )
+                .border(width = 2.dp, color = Color.Black, shape = CircleShape)
+            )
+        }
 
         Text(
             text = noteModel.noteDescription,
@@ -233,8 +289,6 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
             textAlign = TextAlign.Start,
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
-            modifier = Modifier
-                .fillMaxWidth()
         )
     }
 }
@@ -290,5 +344,17 @@ fun BottomSheetOption(value: String, onClick: () -> Unit)
                .align(Alignment.Center)
        )
    }
+}
+
+@Composable
+fun DeleteNoteDialog(onDelete:() -> Unit, onDismiss: () -> Unit) {
+    ConfirmActionDialog(
+        title = "Delete Notes",
+        message = "Are you sure you want to delete notes?",
+        onConfirm = {
+            onDelete()
+        },
+        onDismiss = { onDismiss() }
+    )
 }
 
