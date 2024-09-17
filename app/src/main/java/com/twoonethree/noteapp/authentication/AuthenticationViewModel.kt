@@ -125,6 +125,7 @@ class AuthenticationViewModel:ViewModel() {
         if(!validateOTP(otp))
         {
             authentication.value = Authentication.InvalidOTP
+            isProgressBarShow.value = false
             return
         }
         val credential = PhoneAuthProvider.getCredential(verificationId, otp)

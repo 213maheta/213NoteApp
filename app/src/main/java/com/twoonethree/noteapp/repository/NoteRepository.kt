@@ -17,15 +17,16 @@ import kotlinx.coroutines.tasks.await
 
 class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
 
-
     val noteEvent = mutableStateOf<NoteEvent>(NoteEvent.Empty)
     val scope = CoroutineScope(Dispatchers.IO)
 
     suspend fun syncNotesToFirestore() {
         scope.launch {
-            if(!NetworkMonitor.isNetworkAvailable)
-                return@launch
             val localNotes = noteDao.getAllNotesNotSynced()
+            if(localNotes.isEmpty())
+            {
+                return@launch
+            }
             localNotes.forEach { note ->
                 when(note.isSynced)
                 {
@@ -37,15 +38,15 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
                     }
                 }
             }
-
             val deleteNotes = localNotes.filter {
                 it.isSynced == SyncType.DELETE
             }
-
             if(deleteNotes.isNotEmpty())
             {
                 deleteNoteFromFirestore(deleteNotes, isSync = true)
             }
+
+            noteEvent.value = NoteEvent.NoteSynced
         }
     }
 
@@ -59,17 +60,6 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
     }
 
     suspend fun getAllNotes(): List<NoteModel> {
-        /*when(NetworkMonitor.isNetworkAvailable)
-        {
-            true -> {
-                val snapshot = firestore.collection(FireBaseString.NoteTable).get().await()
-                return snapshot.documents.toNoteModel()
-            }
-            false -> {
-                return noteDao.getAll()
-            }
-        }*/
-        syncNotesToFirestore()
         return noteDao.getAll().filter {
             it.isSynced != SyncType.DELETE
         }

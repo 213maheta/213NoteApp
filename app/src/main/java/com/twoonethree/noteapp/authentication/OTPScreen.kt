@@ -2,11 +2,14 @@ package com.twoonethree.noteapp.authentication
 
 import android.app.Activity
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,12 +30,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
 import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ScreenName
+import com.twoonethree.noteapp.utils.toDp
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import kotlin.reflect.KFunction1
@@ -68,6 +74,12 @@ fun OTPScreen(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_otp), // Replace 'image_name' with your drawable file name
+            contentDescription = "Login Icon", // Replace with a proper description
+            modifier = Modifier.size(600.toDp()), // Modify size as needed
+        )
+        Spacer(modifier = Modifier.height(16.toDp()))
         OTPInputScreen(vm::verifyOtp, vm::resendOTP)
     }
 
@@ -147,7 +159,7 @@ fun OtpBox(
     OutlinedTextField(
         value = otpDigit.value,
         onValueChange = {
-            otpDigit.value = it
+            otpDigit.value = it.take(1)
             if (it.length == 1) {
                 nextFocus.requestFocus()
             } else if (it.isEmpty() or it.isBlank()) {

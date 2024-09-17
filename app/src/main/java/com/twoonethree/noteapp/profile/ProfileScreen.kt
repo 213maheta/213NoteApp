@@ -1,5 +1,6 @@
 package com.twoonethree.noteapp.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -12,44 +13,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.ConfirmActionDialog
 import com.twoonethree.noteapp.utils.ScreenName
+import com.twoonethree.noteapp.utils.toDp
+import org.checkerframework.checker.units.qual.C
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) -> Unit) {
+fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) -> Unit, popup:() -> Boolean) {
 
     val context = LocalContext.current
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp),
-    ) {
-        ProfileInfo(vm.currentUser)
 
-        Spacer(modifier = Modifier.height(16.dp))
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.toDp())
+                .background(color = Color.Red)
+        ) { com.twoonethree.noteapp.addnote.TopAppBar(popup) }
 
-        ProfileActionButton(
-            onLogOutClick = {vm.isLogoutDialogShow.value = true},
-            onDeleteClick = {vm.isDeleteDialogShow.value = true }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(text = vm.getAppVersionName(context),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(16.dp),
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_profile), // Replace 'image_name' with your drawable file name
+                contentDescription = "Login Icon", // Replace with a proper description
+                modifier = Modifier.size(600.toDp()), // Modify size as needed
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            ProfileInfo(vm.currentUser)
+            Spacer(modifier = Modifier.height(16.dp))
+            ProfileActionButton(
+                onLogOutClick = {vm.isLogoutDialogShow.value = true},
+                onDeleteClick = {vm.isDeleteDialogShow.value = true }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = vm.getAppVersionName(context),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
+
+
+
 
     if(vm.isLogoutDialogShow.value)
     {
@@ -60,6 +81,12 @@ fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) ->
     {
         DeleteAccountWithConfirmation(navigateTo,onDismiss = { vm.isDeleteDialogShow.value = false })
     }
+}
+
+@Composable
+fun TopBar()
+{
+
 }
 
 

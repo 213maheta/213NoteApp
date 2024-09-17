@@ -1,6 +1,7 @@
 package com.twoonethree.noteapp.homescreen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -48,23 +51,26 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
+import com.twoonethree.noteapp.R
+import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.dialog.ConfirmActionDialog
 import com.twoonethree.noteapp.model.NoteModel
-import com.twoonethree.noteapp.sealed.Authentication
 import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ColorProvider
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.TimeUtils
+import com.twoonethree.noteapp.utils.toDp
 import com.twoonethree.noteapp.utils.toJson
 
 @Composable
 fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
+
     LaunchedEffect(Unit) {
         vm.getAllNotes()
     }
@@ -78,6 +84,10 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
             NoteEvent.NoteDeleted -> { context.showToast("Note deleted successfully") }
             NoteEvent.NoteUpdated -> { context.showToast("Note updated successfully") }
             is NoteEvent.Failure -> { context.showToast((vm.noteRepository.noteEvent.value as NoteEvent.Failure).message) }
+            NoteEvent.NoteSynced -> {
+                context.showToast("Note synced successfully")
+            }
+            NoteEvent.NoInternet -> {context.showToast("Internet not available")}
             NoteEvent.Empty -> Unit
         }
         vm.noteRepository.noteEvent.value = NoteEvent.Empty
@@ -92,7 +102,9 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
                 deleteNote = { vm.isDeleteDialogShow.value = true },
                 isLongPress = vm.isLongPress,
                 onSortClick,
-                navigateTo
+                navigateTo,
+                vm::syncNotesToFirestore,
+                vm.unSyncedData
                 )
 
             Box(modifier = Modifier.fillMaxSize())
@@ -128,7 +140,10 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
         DeleteNoteDialog(onDelete = { vm.deleteNote() }, onDismiss = {vm.isDeleteDialogShow.value = false})
     }
 
-
+    if(vm.isProgressBarShow.value)
+    {
+        CircularProgressBarExample()
+    }
 }
 
 @Composable
@@ -136,7 +151,9 @@ fun TopBar(
     deleteNote: () -> Unit,
     isLongPress: MutableState<Boolean>,
     showSortDialog: () -> Unit,
-    navigateTo: (String) -> Unit
+    navigateTo: (String) -> Unit,
+    sync: () -> Unit,
+    unSyncedData: MutableState<Boolean>
 )
 {
     Row(verticalAlignment = Alignment.CenterVertically,
@@ -152,6 +169,17 @@ fun TopBar(
                 contentDescription = "Delete",
                 tint = Color.Red
             )
+        }
+
+        if(unSyncedData.value)
+        {
+            IconButton(onClick = {sync()}) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = Color.Red
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -195,9 +223,24 @@ fun NoteListView(
 
     if(noteList.isEmpty())
     {
-        Box(modifier = Modifier.fillMaxSize())
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize()
+        )
         {
-            Text(text = "No Notes", modifier = Modifier.align(Alignment.Center))
+            Image(
+                painter = painterResource(id = R.drawable.ic_no_notes), // Replace 'image_name' with your drawable file name
+                contentDescription = "Login Icon", // Replace with a proper description
+                modifier = Modifier
+                    .size(600.toDp())
+                    .offset(y = -50.toDp())
+            )
+
+            Text(text = "No Note",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center)
         }
         return
     }
@@ -231,6 +274,7 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
     )
     {
         val isSelected = remember { mutableStateOf(noteModel.isSelected) }
+        val isSynced = remember { mutableStateOf(noteModel.isSynced) }
 
         AnimatedVisibility(visible = onLongPress.value) {
             Box(modifier = Modifier.fillMaxWidth())

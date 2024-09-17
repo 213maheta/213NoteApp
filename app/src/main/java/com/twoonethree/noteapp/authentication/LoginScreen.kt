@@ -1,6 +1,7 @@
 package com.twoonethree.noteapp.authentication
 
 import android.app.Activity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -12,12 +13,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
 import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ScreenName
+import com.twoonethree.noteapp.utils.toDp
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -72,6 +76,15 @@ fun ProfileInfoInput(vm: AuthenticationViewModel)
         modifier = Modifier.fillMaxSize()
     )
     {
+
+        Image(
+            painter = painterResource(id = R.drawable.ic_login1), // Replace 'image_name' with your drawable file name
+            contentDescription = "Login Icon", // Replace with a proper description
+            modifier = Modifier.size(600.toDp()), // Modify size as needed
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = vm.userName.value,
             onValueChange = { vm.userName.value = it },

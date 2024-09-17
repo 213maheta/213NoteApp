@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
 import com.twoonethree.noteapp.navigationsetup.NavigationSetup
 import com.twoonethree.noteapp.network.NetworkMonitor
 import kotlinx.coroutines.CoroutineScope
