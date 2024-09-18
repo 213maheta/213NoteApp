@@ -14,7 +14,10 @@ interface NoteDao {
     suspend fun getAll(): List<NoteModel>
 
     @Insert
-    suspend fun add(note: NoteModel)
+    suspend fun insert(note: NoteModel)
+
+    @Insert
+    suspend fun insertAll(notes: List<NoteModel>)
 
     @Delete
     suspend fun delete(items: List<NoteModel>)
@@ -27,4 +30,7 @@ interface NoteDao {
 
     @Query("SELECT * FROM NoteTable WHERE isSynced != 0")
     suspend fun getAllNotesNotSynced(): List<NoteModel>
+
+    @Query("DELETE FROM NoteTable")
+    suspend fun clearNotes()
 }

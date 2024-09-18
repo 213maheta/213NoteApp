@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -63,10 +64,12 @@ import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ColorProvider
+import com.twoonethree.noteapp.utils.MessageBox
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.TimeUtils
 import com.twoonethree.noteapp.utils.toDp
 import com.twoonethree.noteapp.utils.toJson
+import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
@@ -76,6 +79,15 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
     }
 
     val context = LocalContext.current
+    val isMessageBoxShow = remember{ mutableStateOf(false) }
+
+    LaunchedEffect(key1 = vm.messageBox.value) {
+        if(vm.messageBox.value.isEmpty())
+            return@LaunchedEffect
+        isMessageBoxShow.value = true
+        delay(10000)
+        isMessageBoxShow.value = false
+    }
     
     LaunchedEffect(key1 = vm.noteRepository.noteEvent.value) {
         when(vm.noteRepository.noteEvent.value)
@@ -83,17 +95,19 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
             NoteEvent.NoteAdded -> { context.showToast("Note added successfully") }
             NoteEvent.NoteDeleted -> { context.showToast("Note deleted successfully") }
             NoteEvent.NoteUpdated -> { context.showToast("Note updated successfully") }
-            is NoteEvent.Failure -> { context.showToast((vm.noteRepository.noteEvent.value as NoteEvent.Failure).message) }
-            NoteEvent.NoteSynced -> {
-                context.showToast("Note synced successfully")
+            is NoteEvent.Failure -> vm.messageBox.value = (vm.noteRepository.noteEvent.value as NoteEvent.Failure).message
+            NoteEvent.DataSynced -> {
+                vm.getAllNotes()
+                context.showToast("Data synced successfully")
             }
-            NoteEvent.NoInternet -> {context.showToast("Internet not available")}
+            NoteEvent.NoInternet -> vm.messageBox.value = "Internet not available"
             NoteEvent.Empty -> Unit
+            NoteEvent.NoDataAvailable -> Unit
         }
         vm.noteRepository.noteEvent.value = NoteEvent.Empty
     }
 
-    val onSortClick = {vm.showSortDialog.value = !vm.showSortDialog.value}
+    val onSortClick = remember{{vm.showSortDialog.value = !vm.showSortDialog.value}}
 
     Box(modifier = Modifier.fillMaxSize())
     {
@@ -104,8 +118,7 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
                 onSortClick,
                 navigateTo,
                 vm::syncNotesToFirestore,
-                vm.unSyncedData
-                )
+                vm.unSyncedData)
 
             Box(modifier = Modifier.fillMaxSize())
             {
@@ -121,28 +134,27 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(10.dp)
-        ) {
-            Icon(Icons.Filled.Add, "")
-        }
+        ) { Icon(Icons.Filled.Add, "") }
 
         if(vm.showSortDialog.value)
         {
-            BottomSheetContent(onSortClick,
+            BottomSheetContent(
+                onSortClick,
                 vm::sortByName,
                 vm::sortByTimeDescending,
-                vm::sortByTimeAscending,
-                )
+                vm::sortByTimeAscending)
         }
     }
 
     if(vm.isDeleteDialogShow.value)
-    {
-        DeleteNoteDialog(onDelete = { vm.deleteNote() }, onDismiss = {vm.isDeleteDialogShow.value = false})
-    }
+    { DeleteNoteDialog(onDelete = { vm.deleteNote() }, onDismiss = {vm.isDeleteDialogShow.value = false})}
 
     if(vm.isProgressBarShow.value)
+    { CircularProgressBarExample() }
+
+    if(isMessageBoxShow.value)
     {
-        CircularProgressBarExample()
+        MessageBox(message = vm.messageBox.value)
     }
 }
 
@@ -162,7 +174,6 @@ fun TopBar(
             .fillMaxHeight(0.08f)
 
     ) {
-
         IconButton(onClick = {showSortDialog()}) {
             Icon(
                 imageVector = Icons.Default.List,
@@ -203,7 +214,6 @@ fun TopBar(
                 }
             }
         }
-
         IconButton(onClick = {navigateTo(ScreenName.ProfileScreen)}) {
             Icon(
                 imageVector = Icons.Default.Face,
@@ -274,7 +284,6 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
     )
     {
         val isSelected = remember { mutableStateOf(noteModel.isSelected) }
-        val isSynced = remember { mutableStateOf(noteModel.isSynced) }
 
         AnimatedVisibility(visible = onLongPress.value) {
             Box(modifier = Modifier.fillMaxWidth())
@@ -284,7 +293,12 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
                     onCheckedChange = { isChecked ->
                         isSelected.value = isChecked
                         noteModel.isSelected = isChecked
-                    }
+                    },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Color.Red, // Color when checked
+                        uncheckedColor = Color.Red, // Color when unchecked
+                        checkmarkColor = Color.White // Color of the checkmark
+                    )
                 , modifier = Modifier.align(Alignment.CenterEnd))
             }
         }

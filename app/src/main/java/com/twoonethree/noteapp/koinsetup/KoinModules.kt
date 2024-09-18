@@ -43,6 +43,6 @@ val appModule = module {
 
     viewModel{ HomeViewModel(get()) }
     viewModel{ AddNoteViewModel(get()) }
-    viewModel{ AuthenticationViewModel() }
-    viewModel{ ProfileViewModel() }
+    viewModel{ AuthenticationViewModel(get()) }
+    viewModel{ ProfileViewModel(get()) }
 }

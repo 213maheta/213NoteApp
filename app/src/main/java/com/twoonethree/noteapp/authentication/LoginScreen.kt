@@ -20,8 +20,10 @@ import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
 import com.twoonethree.noteapp.showToast
+import com.twoonethree.noteapp.utils.MessageBox
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.toDp
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -30,24 +32,28 @@ fun LoginScreen(
     vm: AuthenticationViewModel = koinViewModel(),
     navigateTo: (String) -> Unit
 ) {
-
     val context = LocalContext.current as Activity
+    val isMessageBoxShow = remember{ mutableStateOf(false) }
+
+    LaunchedEffect(key1 = vm.messageBox.value) {
+        if(vm.messageBox.value.isEmpty())
+            return@LaunchedEffect
+        isMessageBoxShow.value = true
+        delay(10000)
+        isMessageBoxShow.value = false
+    }
 
     LaunchedEffect(key1 = vm.authentication.value) {
         when(vm.authentication.value)
         {
-            Authentication.Empty -> Unit
-            Authentication.SignInSuccessfull -> {
-                navigateTo(ScreenName.HomeScreen)
-                context.showToast("Signin Successfull")
+            Authentication.InvalidMobileNumber -> {
+                vm.messageBox.value = "Invalid Mobile Number"
             }
-            Authentication.InvalidMobileNumber -> context.showToast("Invalid Mobile Number")
-            Authentication.InvalidOTP -> context.showToast("Invalid OTP")
             Authentication.OTPSent -> {
                 navigateTo(ScreenName.OTPScreen)
                 context.showToast("OTP sent")
             }
-            Authentication.SignInFailed -> context.showToast("Wrong OTP")
+            else -> Unit
         }
         vm.authentication.value = Authentication.Empty
     }
@@ -55,13 +61,16 @@ fun LoginScreen(
     Box(
         modifier = Modifier
         .fillMaxSize()
-    ) {
-        ProfileInfoInput(vm)
-    }
+    ) { ProfileInfoInput(vm) }
 
     if(vm.isProgressBarShow.value)
     {
         CircularProgressBarExample()
+    }
+
+    if(isMessageBoxShow.value)
+    {
+        MessageBox(message = vm.messageBox.value)
     }
 }
 
@@ -69,14 +78,12 @@ fun LoginScreen(
 fun ProfileInfoInput(vm: AuthenticationViewModel)
 {
     val context = LocalContext.current as Activity
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     )
     {
-
         Image(
             painter = painterResource(id = R.drawable.ic_login1), // Replace 'image_name' with your drawable file name
             contentDescription = "Login Icon", // Replace with a proper description
@@ -116,6 +123,7 @@ fun ProfileInfoInput(vm: AuthenticationViewModel)
         }
     }
 }
+
 
 
 

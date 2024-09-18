@@ -9,11 +9,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,15 +24,32 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.ConfirmActionDialog
+import com.twoonethree.noteapp.sealed.NoteEvent
+import com.twoonethree.noteapp.showToast
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.toDp
-import org.checkerframework.checker.units.qual.C
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) -> Unit, popup:() -> Boolean) {
 
     val context = LocalContext.current
+    val onLogOutClick = remember{{vm.isLogoutDialogShow.value = true}}
+    val onDeleteClick = remember{{vm.isDeleteDialogShow.value = true }}
+    val onSyncClick =  remember{{vm.isSyncFromServer.value = true }}
+    val onSyncConfirm =  remember{{vm.syncFromServer()}}
+
+    LaunchedEffect(key1 = vm.noteRepository.noteEvent.value) {
+        when(vm.noteRepository.noteEvent.value)
+        {
+            NoteEvent.NoInternet -> {context.showToast("Internet not available")}
+            NoteEvent.NoDataAvailable -> {context.showToast("No data available on server")}
+            NoteEvent.DataSynced -> {context.showToast("Data synced sucessfully")}
+            NoteEvent.Empty -> Unit
+            else -> Unit
+        }
+        vm.noteRepository.noteEvent.value = NoteEvent.Empty
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -58,8 +76,9 @@ fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) ->
             ProfileInfo(vm.currentUser)
             Spacer(modifier = Modifier.height(16.dp))
             ProfileActionButton(
-                onLogOutClick = {vm.isLogoutDialogShow.value = true},
-                onDeleteClick = {vm.isDeleteDialogShow.value = true }
+                onLogOutClick = onLogOutClick,
+                onDeleteClick = onDeleteClick,
+                onSyncClick = onSyncClick
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = vm.getAppVersionName(context),
@@ -69,26 +88,19 @@ fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) ->
         }
     }
 
-
-
-
     if(vm.isLogoutDialogShow.value)
     {
         LogoutWithConfirmation(navigateTo, onDismiss = { vm.isLogoutDialogShow.value = false })
     }
-
     if(vm.isDeleteDialogShow.value)
     {
         DeleteAccountWithConfirmation(navigateTo,onDismiss = { vm.isDeleteDialogShow.value = false })
     }
+    if(vm.isSyncFromServer.value)
+    {
+        SyncWithServer(onSyncConfirm , onDismiss = { vm.isSyncFromServer.value = false })
+    }
 }
-
-@Composable
-fun TopBar()
-{
-
-}
-
 
 @Composable
 fun ProfileInfo(currentUser: FirebaseUser?)
@@ -130,8 +142,20 @@ fun ProfileInfo(currentUser: FirebaseUser?)
 }
 
 @Composable
-fun ProfileActionButton(onLogOutClick: () -> Unit, onDeleteClick: () -> Unit)
+fun ProfileActionButton(onLogOutClick: () -> Unit, onDeleteClick: () -> Unit, onSyncClick: () -> Unit)
 {
+    //Logout
+    Button(
+        onClick = {
+            onSyncClick()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(50.dp)
+    ) {
+        Text(text = "Sync Data from Server", color = Color.White)
+    }
+
     //Logout
     Button(
         onClick = {
@@ -188,6 +212,16 @@ fun DeleteAccountWithConfirmation(navigateTo: (String) -> Unit, onDismiss: () ->
                 }
             }
         },
+        onDismiss = { onDismiss() }
+    )
+}
+
+@Composable
+fun SyncWithServer(onSyncConfirm: () -> Unit, onDismiss: () -> Unit) {
+    ConfirmActionDialog(
+        title = "Sync with server",
+        message = "Local changes will be lost. This action cannot be undone.",
+        onConfirm = { onSyncConfirm()},
         onDismiss = { onDismiss() }
     )
 }

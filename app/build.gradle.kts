@@ -5,7 +5,6 @@ plugins {
     id ("kotlin-parcelize")
     // Add the Google services Gradle plugin
     id("com.google.gms.google-services")
-
 }
 
 android {
@@ -18,8 +17,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
-
     }
 
     buildTypes {

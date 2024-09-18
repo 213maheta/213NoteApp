@@ -4,13 +4,20 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.twoonethree.noteapp.network.NetworkMonitor
+import com.twoonethree.noteapp.repository.NoteRepository
+import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.utils.ScreenName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class ProfileViewModel:ViewModel() {
+class ProfileViewModel(val noteRepository: NoteRepository):ViewModel() {
 
     val isLogoutDialogShow = mutableStateOf(false)
     val isDeleteDialogShow = mutableStateOf(false)
+    val isSyncFromServer = mutableStateOf(false)
 
     val currentUser by lazy{
         FirebaseAuth.getInstance().currentUser
@@ -25,30 +32,15 @@ class ProfileViewModel:ViewModel() {
         }
     }
 
-    fun logOut(){
-        FirebaseAuth.getInstance().signOut() // Logs the user out
-        //navigateTo(ScreenName.LogInScreen)
-    }
-
-    fun deleteAccount()
+    fun syncFromServer()
     {
-        val auth = FirebaseAuth.getInstance()
-        val currentUser = auth.currentUser
-
-        currentUser?.let { user ->
-            user.delete()
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-
-                    } else {
-
-                    }
-                }
-                .addOnFailureListener {
-
-                }
-        } ?: run {
-
+        if(!NetworkMonitor.isNetworkAvailable)
+        {
+            noteRepository.noteEvent.value = NoteEvent.NoInternet
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            noteRepository.syncNotesFromFirestore()
         }
     }
 }

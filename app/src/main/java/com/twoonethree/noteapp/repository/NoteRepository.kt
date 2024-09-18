@@ -5,6 +5,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.model.toHashMap
+import com.twoonethree.noteapp.model.toNoteModel
 import com.twoonethree.noteapp.network.NetworkMonitor
 import com.twoonethree.noteapp.roomsetup.NoteDao
 import com.twoonethree.noteapp.sealed.NoteEvent
@@ -45,18 +46,22 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
             {
                 deleteNoteFromFirestore(deleteNotes, isSync = true)
             }
-
-            noteEvent.value = NoteEvent.NoteSynced
+            noteEvent.value = NoteEvent.DataSynced
         }
     }
 
 
     suspend fun syncNotesFromFirestore() {
         val snapshot = firestore.collection(FireBaseString.NoteTable).get().await()
-        val notes = snapshot.documents.mapNotNull { it.toObject(NoteModel::class.java) }
-        notes.forEach { note ->
-            noteDao.add(note)
+        if (snapshot.documents.isEmpty())
+        {
+            noteEvent.value = NoteEvent.NoDataAvailable
+            return
         }
+        noteDao.clearNotes()
+        val noteList = snapshot.documents.toNoteModel()
+        noteDao.insertAll(noteList)
+        noteEvent.value = NoteEvent.DataSynced
     }
 
     suspend fun getAllNotes(): List<NoteModel> {
@@ -73,7 +78,7 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
                 addOrUpdateNoteToFirestore(noteModel, false, isSync = false)
             }
             false -> {
-                noteDao.add(noteModel.also { it.isSynced = SyncType.ADD })
+                noteDao.insert(noteModel.also { it.isSynced = SyncType.ADD })
                 noteEvent.value = NoteEvent.NoteAdded
             }
         }
@@ -120,7 +125,6 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
             updateNoteToFirebase(notesCollection, note, noteDataMap, isSync)
             return
         }
-
         addNoteToFirebase(notesCollection, note, noteDataMap, isSync)
     }
 
@@ -165,7 +169,7 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
                         noteDao.updateSyncStatus(note.primaryKey, isSynced = SyncType.SYNCED)
                     }
                     else{
-                        noteDao.add(note.also { it.isSynced = SyncType.SYNCED })
+                        noteDao.insert(note.also { it.isSynced = SyncType.SYNCED })
                         noteEvent.value = NoteEvent.NoteAdded
                     }
                 }

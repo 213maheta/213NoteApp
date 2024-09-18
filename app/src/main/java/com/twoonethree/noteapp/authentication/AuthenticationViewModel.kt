@@ -1,26 +1,32 @@
 package com.twoonethree.noteapp.authentication
 
 import android.app.Activity
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.twoonethree.noteapp.MyApplication
+import com.twoonethree.noteapp.repository.NoteRepository
 import com.twoonethree.noteapp.sealed.Authentication
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.util.concurrent.TimeUnit
 
-class AuthenticationViewModel:ViewModel() {
-
+class AuthenticationViewModel(val noteRepository: NoteRepository):ViewModel(){
 
     var userName = mutableStateOf("")
     var mobileNumber = mutableStateOf("")
     var isOTPSent = mutableStateOf(false)
     private val auth by lazy { FirebaseAuth.getInstance()}
+
+    val messageBox = mutableStateOf("")
 
     val isProgressBarShow = mutableStateOf(false)
 
@@ -58,6 +64,7 @@ class AuthenticationViewModel:ViewModel() {
         if(!validateMobile())
         {
             authentication.value = Authentication.InvalidMobileNumber
+            isProgressBarShow.value = false
             return
         }
         val options = PhoneAuthOptions.newBuilder(auth)
@@ -114,6 +121,9 @@ class AuthenticationViewModel:ViewModel() {
             ?.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     authentication.value = Authentication.SignInSuccessfull
+                    viewModelScope.launch(Dispatchers.IO){
+                        noteRepository.syncNotesFromFirestore()
+                    }
                 } else {
                     authentication.value = Authentication.SignInFailed
                 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,6 +38,7 @@ import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
 import com.twoonethree.noteapp.showToast
+import com.twoonethree.noteapp.utils.MessageBox
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.toDp
 import kotlinx.coroutines.delay
@@ -51,20 +53,28 @@ fun OTPScreen(
 )
 {
     val context = LocalContext.current as Activity
+    val isMessageBoxShow = remember{ mutableStateOf(false) }
+
+    LaunchedEffect(key1 = vm.messageBox.value) {
+        if(vm.messageBox.value.isEmpty())
+            return@LaunchedEffect
+        isMessageBoxShow.value = true
+        delay(10000)
+        isMessageBoxShow.value = false
+    }
 
     LaunchedEffect(key1 = vm.authentication.value) {
         Log.e("TAG", "OTPScreen: ${vm.mobileNumber.value}", )
         when(vm.authentication.value)
         {
-            Authentication.Empty -> Unit
             Authentication.SignInSuccessfull -> {
                 navigateTo(ScreenName.HomeScreen)
                 context.showToast("Signin Successfull")
             }
-            Authentication.InvalidMobileNumber -> context.showToast("Invalid Mobile Number")
-            Authentication.InvalidOTP -> context.showToast("Invalid OTP")
+            Authentication.InvalidOTP -> vm.messageBox.value = "Invalid OTP"
             Authentication.OTPSent -> context.showToast("OTP sent")
-            Authentication.SignInFailed -> context.showToast("Wrong OTP")
+            Authentication.SignInFailed -> vm.messageBox.value = "Wrong OTP"
+            else -> Unit
         }
         vm.authentication.value = Authentication.Empty
     }
@@ -86,6 +96,10 @@ fun OTPScreen(
     if(vm.isProgressBarShow.value)
     {
         CircularProgressBarExample()
+    }
+    if(isMessageBoxShow.value)
+    {
+        MessageBox(message = vm.messageBox.value)
     }
 }
 
@@ -162,7 +176,9 @@ fun OtpBox(
             otpDigit.value = it.take(1)
             if (it.length == 1) {
                 nextFocus.requestFocus()
-            } else if (it.isEmpty() or it.isBlank()) {
+            }
+            else if(it.isEmpty())
+            {
                 preFocus.requestFocus()
             }
         },

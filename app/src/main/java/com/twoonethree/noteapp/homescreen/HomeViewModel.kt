@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.twoonethree.noteapp.MyApplication
 import com.twoonethree.noteapp.repository.NoteRepository
 import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.network.NetworkMonitor
@@ -11,8 +12,10 @@ import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.utils.SyncType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class HomeViewModel(val noteRepository: NoteRepository):ViewModel() {
+class HomeViewModel(val noteRepository: NoteRepository):ViewModel(), KoinComponent {
 
     val noteList = mutableStateListOf<NoteModel>()
     val isLongPress = mutableStateOf(false)
@@ -22,6 +25,8 @@ class HomeViewModel(val noteRepository: NoteRepository):ViewModel() {
 
     val isProgressBarShow = mutableStateOf(false)
     val unSyncedData = mutableStateOf(false)
+
+    val messageBox = mutableStateOf("")
 
     fun getAllNotes(){
         viewModelScope.launch(Dispatchers.IO) {

@@ -13,8 +13,9 @@ sealed class NoteEvent(){
     object NoteAdded:NoteEvent()
     object NoteUpdated:NoteEvent()
     object NoteDeleted:NoteEvent()
-    object NoteSynced:NoteEvent()
+    object DataSynced:NoteEvent()
     object NoInternet:NoteEvent()
+    object NoDataAvailable:NoteEvent()
     object Empty:NoteEvent()
     data class Failure(val message:String):NoteEvent()
 }
