@@ -40,7 +40,7 @@ fun LoginScreen(
         if(vm.messageBox.value.isEmpty())
             return@LaunchedEffect
         isMessageBoxShow.value = true
-        delay(10000)
+        delay(3000)
         isMessageBoxShow.value = false
     }
 

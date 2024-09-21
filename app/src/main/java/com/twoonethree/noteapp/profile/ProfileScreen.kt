@@ -1,5 +1,6 @@
 package com.twoonethree.noteapp.profile
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,26 +30,47 @@ import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.ConfirmActionDialog
 import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.showToast
+import com.twoonethree.noteapp.utils.MessageBox
 import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.toDp
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun ProfilePage(navController: NavController, vm : ProfileViewModel = koinViewModel()) {
+fun ProfilePage(navController: NavController, vm: ProfileViewModel = koinViewModel()) {
 
     val context = LocalContext.current
-    val onLogOutClick = remember{{vm.isLogoutDialogShow.value = true}}
-    val onDeleteClick = remember{{vm.isDeleteDialogShow.value = true }}
-    val onSyncClick =  remember{{vm.isSyncFromServer.value = true }}
-    val onSyncConfirm =  remember{{vm.syncFromServer()}}
-    val clearNotes =  remember{{vm.clearNotes()}}
+    val onLogOutClick = remember { { vm.isLogoutDialogShow.value = true } }
+    val onDeleteClick = remember { {
+        if(vm.checkInterNet())
+            vm.isDeleteDialogShow.value = true
+    } }
+    val onSyncClick = remember { { vm.isSyncFromServer.value = true } }
+    val onSyncConfirm = remember { { vm.syncFromServer() } }
+    val clearNotes = remember { { vm.clearNotes() } }
+    val deleteUserOnServer = remember { { vm.deleteUserOnSever() } }
+    val isMessageBoxShow = remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = vm.messageBox.value) {
+        if (vm.messageBox.value.isEmpty())
+            return@LaunchedEffect
+        isMessageBoxShow.value = true
+        delay(3000)
+        isMessageBoxShow.value = false
+    }
 
     LaunchedEffect(key1 = vm.noteRepository.noteEvent.value) {
-        when(vm.noteRepository.noteEvent.value)
-        {
-            NoteEvent.NoInternet -> {context.showToast("Internet not available")}
-            NoteEvent.NoDataAvailable -> {context.showToast("No data available on server")}
-            NoteEvent.DataSynced -> {context.showToast("Data synced sucessfully")}
+        when (vm.noteRepository.noteEvent.value) {
+            NoteEvent.NoInternet -> vm.messageBox.value = "Internet not available"
+            NoteEvent.NoDataAvailable -> vm.messageBox.value = "No data available on server"
+            NoteEvent.DataSynced -> context.showToast("Data synced sucessfully")
+            NoteEvent.USER_DELETED -> {
+                navController.navigate(ScreenName.LogInScreen) { popUpTo(ScreenName.HomeScreen) { inclusive = true } }
+                context.showToast("User deleted sucessfully")
+            }
+            is NoteEvent.Failure -> {
+                vm.messageBox.value = (vm.noteRepository.noteEvent.value as NoteEvent.Failure).message
+            }
             NoteEvent.Empty -> Unit
             else -> Unit
         }
@@ -84,30 +107,37 @@ fun ProfilePage(navController: NavController, vm : ProfileViewModel = koinViewMo
                 onSyncClick = onSyncClick
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = vm.getAppVersionName(context),
+            Text(
+                text = vm.getAppVersionName(context),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
     }
 
-    if(vm.isLogoutDialogShow.value)
-    {
-        LogoutWithConfirmation(navController = navController, onDismiss = { vm.isLogoutDialogShow.value = false }, clearNotes = clearNotes)
+    if (vm.isLogoutDialogShow.value) {
+        LogoutWithConfirmation(
+            navController = navController,
+            onDismiss = { vm.isLogoutDialogShow.value = false },
+            clearNotes = clearNotes
+        )
     }
-    if(vm.isDeleteDialogShow.value)
-    {
-        DeleteAccountWithConfirmation(navController = navController,onDismiss = { vm.isDeleteDialogShow.value = false },      clearNotes = clearNotes)
+    if (vm.isDeleteDialogShow.value) {
+        DeleteAccountWithConfirmation(
+            onDismiss = { vm.isDeleteDialogShow.value = false },
+            deleteUserOnServer = deleteUserOnServer,
+        )
     }
-    if(vm.isSyncFromServer.value)
-    {
-        SyncWithServer(onSyncConfirm , onDismiss = { vm.isSyncFromServer.value = false })
+    if (vm.isSyncFromServer.value) {
+        SyncWithServer(onSyncConfirm, onDismiss = { vm.isSyncFromServer.value = false })
+    }
+    if (isMessageBoxShow.value) {
+        MessageBox(message = vm.messageBox.value)
     }
 }
 
 @Composable
-fun ProfileInfo(currentUser: FirebaseUser?)
-{
+fun ProfileInfo(currentUser: FirebaseUser?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -129,13 +159,13 @@ fun ProfileInfo(currentUser: FirebaseUser?)
 
         Column {
             Text(
-                text = currentUser?.displayName?:"", // Replace with dynamic user name
+                text = currentUser?.displayName ?: "", // Replace with dynamic user name
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Text(
-                text = currentUser?.phoneNumber?:"", // Replace with dynamic description
+                text = currentUser?.phoneNumber ?: "", // Replace with dynamic description
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.Black,
@@ -146,8 +176,11 @@ fun ProfileInfo(currentUser: FirebaseUser?)
 }
 
 @Composable
-fun ProfileActionButton(onLogOutClick: () -> Unit, onDeleteClick: () -> Unit, onSyncClick: () -> Unit)
-{
+fun ProfileActionButton(
+    onLogOutClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onSyncClick: () -> Unit
+) {
     //Logout
     Button(
         onClick = {
@@ -197,7 +230,7 @@ fun LogoutWithConfirmation(
         onConfirm = {
             FirebaseAuth.getInstance().signOut()
             clearNotes()
-            navController.navigate(ScreenName.LogInScreen){
+            navController.navigate(ScreenName.LogInScreen) {
                 popUpTo(ScreenName.HomeScreen) { inclusive = true }
             }
         },
@@ -207,28 +240,14 @@ fun LogoutWithConfirmation(
 
 @Composable
 fun DeleteAccountWithConfirmation(
-    navController: NavController,
     onDismiss: () -> Unit,
-    clearNotes: () -> Unit
+    deleteUserOnServer: () -> Unit,
 ) {
-
     ConfirmActionDialog(
         title = "Delete Account",
         message = "Are you sure you want to delete your account? This action cannot be undone.",
         onConfirm = {
-            val currentUser = FirebaseAuth.getInstance().currentUser
-            currentUser?.let { user ->
-                user.delete().addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        clearNotes
-                        navController.navigate(ScreenName.LogInScreen){
-                            popUpTo(ScreenName.HomeScreen) { inclusive = true }
-                        }
-                    } else {
-
-                    }
-                }
-            }
+            deleteUserOnServer()
         },
         onDismiss = { onDismiss() }
     )
@@ -239,7 +258,7 @@ fun SyncWithServer(onSyncConfirm: () -> Unit, onDismiss: () -> Unit) {
     ConfirmActionDialog(
         title = "Sync with server",
         message = "Local changes will be lost. This action cannot be undone.",
-        onConfirm = { onSyncConfirm()},
+        onConfirm = { onSyncConfirm() },
         onDismiss = { onDismiss() }
     )
 }

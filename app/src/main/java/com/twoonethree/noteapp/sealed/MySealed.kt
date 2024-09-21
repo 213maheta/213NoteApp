@@ -16,6 +16,7 @@ sealed class NoteEvent(){
     object DataSynced:NoteEvent()
     object NoInternet:NoteEvent()
     object NoDataAvailable:NoteEvent()
+    object USER_DELETED:NoteEvent()
     object Empty:NoteEvent()
     data class Failure(val message:String):NoteEvent()
 }

@@ -18,6 +18,7 @@ class ProfileViewModel(val noteRepository: NoteRepository):ViewModel() {
     val isLogoutDialogShow = mutableStateOf(false)
     val isDeleteDialogShow = mutableStateOf(false)
     val isSyncFromServer = mutableStateOf(false)
+    val messageBox = mutableStateOf("")
 
     val currentUser =  FirebaseAuth.getInstance().currentUser
 
@@ -34,6 +35,22 @@ class ProfileViewModel(val noteRepository: NoteRepository):ViewModel() {
     {
         viewModelScope.launch(Dispatchers.IO) {
             noteRepository.deleteAllNotes()
+        }
+    }
+
+    fun checkInterNet(): Boolean {
+        if(!NetworkMonitor.isNetworkAvailable)
+        {
+            noteRepository.noteEvent.value = NoteEvent.NoInternet
+            return false
+        }
+        return true
+    }
+
+    fun deleteUserOnSever()
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            noteRepository.deleteUserData()
         }
     }
 

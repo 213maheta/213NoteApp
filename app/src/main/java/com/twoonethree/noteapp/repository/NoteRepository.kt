@@ -1,5 +1,6 @@
 package com.twoonethree.noteapp.repository
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
@@ -11,6 +12,7 @@ import com.twoonethree.noteapp.network.NetworkMonitor
 import com.twoonethree.noteapp.roomsetup.NoteDao
 import com.twoonethree.noteapp.sealed.NoteEvent
 import com.twoonethree.noteapp.utils.FireBaseString
+import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.SyncType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -208,6 +210,35 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
     suspend fun deleteAllNotes()
     {
         noteDao.clearNotes()
+    }
+
+    fun deleteUserData() {
+        Log.e("FireStore", "deleteUserData: ${FirebaseAuth.getInstance().currentUser?.phoneNumber.toString()}", )
+        firestore.collection(FireBaseString.NoteDatabase)
+            .document(FirebaseAuth.getInstance().currentUser?.phoneNumber.toString())
+            .delete()
+            .addOnSuccessListener {
+                deleteUserAuth()
+            }
+            .addOnFailureListener { e ->
+                noteEvent.value  = NoteEvent.Failure("${e.message}")
+            }
+    }
+
+    fun deleteUserAuth()
+    {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.let { user ->
+            user.delete()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        scope.launch { deleteAllNotes() }
+                        noteEvent.value = NoteEvent.USER_DELETED
+                    } }
+                .addOnFailureListener { e ->
+                    noteEvent.value  = NoteEvent.Failure("${e.message}")
+                }
+        }
     }
 
 }

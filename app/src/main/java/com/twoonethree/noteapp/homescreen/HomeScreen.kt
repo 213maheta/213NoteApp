@@ -86,7 +86,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel) {
         if(vm.messageBox.value.isEmpty())
             return@LaunchedEffect
         isMessageBoxShow.value = true
-        delay(10000)
+        delay(3000)
         isMessageBoxShow.value = false
     }
     
@@ -102,8 +102,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel) {
                 context.showToast("Data synced successfully")
             }
             NoteEvent.NoInternet -> vm.messageBox.value = "Internet not available"
-            NoteEvent.Empty -> Unit
-            NoteEvent.NoDataAvailable -> Unit
+            else -> Unit
         }
         vm.noteRepository.noteEvent.value = NoteEvent.Empty
     }
