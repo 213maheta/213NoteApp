@@ -10,13 +10,10 @@ import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
-import com.twoonethree.noteapp.MyApplication
 import com.twoonethree.noteapp.repository.NoteRepository
 import com.twoonethree.noteapp.sealed.Authentication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.util.concurrent.TimeUnit
 
 class AuthenticationViewModel(val noteRepository: NoteRepository):ViewModel(){

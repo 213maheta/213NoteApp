@@ -19,9 +19,7 @@ class ProfileViewModel(val noteRepository: NoteRepository):ViewModel() {
     val isDeleteDialogShow = mutableStateOf(false)
     val isSyncFromServer = mutableStateOf(false)
 
-    val currentUser by lazy{
-        FirebaseAuth.getInstance().currentUser
-    }
+    val currentUser =  FirebaseAuth.getInstance().currentUser
 
     fun getAppVersionName(context: Context): String {
         return try {
@@ -29,6 +27,13 @@ class ProfileViewModel(val noteRepository: NoteRepository):ViewModel() {
             packageInfo.versionName
         } catch (e: PackageManager.NameNotFoundException) {
             "Unknown"
+        }
+    }
+
+    fun clearNotes()
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            noteRepository.deleteAllNotes()
         }
     }
 

@@ -26,8 +26,6 @@ import org.koin.androidx.compose.koinViewModel
 fun NavigationSetup()
 {
     val navController = rememberNavController()
-    val navigateTo = {route:String -> navController.navigate(route)}
-    val popup = {navController.popBackStack()}
     val noteViewModel: HomeViewModel = koinViewModel()
     val authenticationViewModel: AuthenticationViewModel = koinViewModel()
 
@@ -45,7 +43,7 @@ fun NavigationSetup()
     ){
         composable(route = ScreenName.HomeScreen)
         {
-            HomeScreen(navigateTo, noteViewModel)
+            HomeScreen(navController = navController, noteViewModel)
         }
         composable(
             route = "${ScreenName.AddNoteScreen}/{noteModel}",
@@ -54,27 +52,27 @@ fun NavigationSetup()
         { backStackEntry ->
             val message = backStackEntry.arguments?.getString("noteModel")
             val noteModel = fromJson<NoteModel>(message)
-            AddNoteScreen(noteModel = noteModel, popup = popup)
+            AddNoteScreen(noteModel = noteModel, navController = navController)
         }
 
         composable(route = ScreenName.AddNoteScreen)
         {
-            AddNoteScreen(noteModel = null, popup = popup)
+            AddNoteScreen(noteModel = null, navController = navController)
         }
 
         composable(route = ScreenName.LogInScreen)
         {
-            LoginScreen(vm = authenticationViewModel, navigateTo = navigateTo, )
+            LoginScreen(vm = authenticationViewModel, navController= navController )
         }
 
         composable(route = ScreenName.OTPScreen)
         {
-            OTPScreen(vm = authenticationViewModel, navigateTo = navigateTo)
+            OTPScreen(vm = authenticationViewModel, navController = navController)
         }
 
         composable(route = ScreenName.ProfileScreen)
         {
-            ProfilePage(navigateTo = navigateTo, popup = popup)
+            ProfilePage(navController)
         }
     }
 }

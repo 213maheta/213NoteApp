@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
@@ -43,17 +43,19 @@ import com.twoonethree.noteapp.utils.ScreenName
 import com.twoonethree.noteapp.utils.toDp
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
-import kotlin.reflect.KFunction1
 
 
 @Composable
 fun OTPScreen(
     vm: AuthenticationViewModel = koinViewModel(),
-    navigateTo: (String) -> Unit
+    navController: NavController
 )
 {
     val context = LocalContext.current as Activity
     val isMessageBoxShow = remember{ mutableStateOf(false) }
+
+    val veriftOtp = remember{ {otp:String->vm.verifyOtp(otp)}}
+    val resendOTP = remember{ {vm.resendOTP(context)} }
 
     LaunchedEffect(key1 = vm.messageBox.value) {
         if(vm.messageBox.value.isEmpty())
@@ -64,12 +66,14 @@ fun OTPScreen(
     }
 
     LaunchedEffect(key1 = vm.authentication.value) {
-        Log.e("TAG", "OTPScreen: ${vm.mobileNumber.value}", )
         when(vm.authentication.value)
         {
             Authentication.SignInSuccessfull -> {
-                navigateTo(ScreenName.HomeScreen)
                 context.showToast("Signin Successfull")
+                navController.navigate(ScreenName.HomeScreen){
+                    vm.authentication.value = Authentication.Empty
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
             }
             Authentication.InvalidOTP -> vm.messageBox.value = "Invalid OTP"
             Authentication.OTPSent -> context.showToast("OTP sent")
@@ -90,7 +94,7 @@ fun OTPScreen(
             modifier = Modifier.size(600.toDp()), // Modify size as needed
         )
         Spacer(modifier = Modifier.height(16.toDp()))
-        OTPInputScreen(vm::verifyOtp, vm::resendOTP)
+        OTPInputScreen(veriftOtp, resendOTP)
     }
 
     if(vm.isProgressBarShow.value)
@@ -106,8 +110,8 @@ fun OTPScreen(
 
 @Composable
 fun OTPInputScreen(
-    verifyOtp: KFunction1<String, Unit>,
-    resendOtp: KFunction1<Activity, Unit>,
+    verifyOtp: (String) -> Unit,
+    resendOtp: () -> Unit,
 ) {
     val otp1 = remember { mutableStateOf("") }
     val otp2 = remember { mutableStateOf("") }
@@ -173,13 +177,14 @@ fun OtpBox(
     OutlinedTextField(
         value = otpDigit.value,
         onValueChange = {
-            otpDigit.value = it.take(1)
-            if (it.length == 1) {
+            Log.e("TAG", "OtpBox: $it", )
+            if (otpDigit.value.isEmpty()) {  // Limit to 10 characters
+                otpDigit.value = it
                 nextFocus.requestFocus()
             }
-            else if(it.isEmpty())
-            {
-                preFocus.requestFocus()
+            else if (it.isEmpty()) {
+                otpDigit.value = it
+                preFocus.requestFocus() // Move focus to the next box
             }
         },
         modifier = Modifier
@@ -192,10 +197,8 @@ fun OtpBox(
 }
 
 @Composable
-fun ResendOTP(resendOtp: (Activity) -> Unit)
+fun ResendOTP(resendOtp: () -> Unit)
 {
-    val context = LocalContext.current as Activity
-
     var timeLeft by remember { mutableStateOf(60) }
     var isButtonEnabled by remember { mutableStateOf(false) }
 
@@ -223,7 +226,7 @@ fun ResendOTP(resendOtp: (Activity) -> Unit)
         // Resend OTP Button
         Button(
             onClick = {
-                resendOtp(context)
+                resendOtp()
                 timeLeft = 60 // Reset timer
                 isButtonEnabled = false
             },

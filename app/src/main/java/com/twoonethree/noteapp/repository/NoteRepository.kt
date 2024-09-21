@@ -1,6 +1,7 @@
 package com.twoonethree.noteapp.repository
 
 import androidx.compose.runtime.mutableStateOf
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.twoonethree.noteapp.model.NoteModel
@@ -13,6 +14,7 @@ import com.twoonethree.noteapp.utils.FireBaseString
 import com.twoonethree.noteapp.utils.SyncType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -52,14 +54,17 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
 
 
     suspend fun syncNotesFromFirestore() {
-        val snapshot = firestore.collection(FireBaseString.NoteTable).get().await()
-        if (snapshot.documents.isEmpty())
+        val noteCollection = firestore.collection(FireBaseString.NoteDatabase)
+            .document(FirebaseAuth.getInstance().currentUser?.phoneNumber.toString()) // Access the user's document
+            .collection(FireBaseString.NoteTable).get().await()
+
+        if (noteCollection.documents.isEmpty())
         {
             noteEvent.value = NoteEvent.NoDataAvailable
             return
         }
         noteDao.clearNotes()
-        val noteList = snapshot.documents.toNoteModel()
+        val noteList = noteCollection.documents.toNoteModel()
         noteDao.insertAll(noteList)
         noteEvent.value = NoteEvent.DataSynced
     }
@@ -115,17 +120,17 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
     }
 
     suspend fun addOrUpdateNoteToFirestore(note: NoteModel, isUpdate:Boolean, isSync:Boolean) {
-        val firestore = FirebaseFirestore.getInstance()
-        val notesCollection = firestore.collection(FireBaseString.NoteTable)
-
         val noteDataMap = note.toHashMap()
+        val snapShot = firestore.collection(FireBaseString.NoteDatabase)
+            .document(FirebaseAuth.getInstance().currentUser?.phoneNumber.toString()) // Access the user's document
+            .collection(FireBaseString.NoteTable)
 
         if(isUpdate)
         {
-            updateNoteToFirebase(notesCollection, note, noteDataMap, isSync)
+            updateNoteToFirebase(snapShot, note, noteDataMap, isSync)
             return
         }
-        addNoteToFirebase(notesCollection, note, noteDataMap, isSync)
+        addNoteToFirebase(snapShot, note, noteDataMap, isSync)
     }
 
     suspend fun updateNoteToFirebase(
@@ -180,11 +185,13 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
     }
 
     suspend fun deleteNoteFromFirestore(notes: List<NoteModel>, isSync: Boolean) {
-        val firestore = FirebaseFirestore.getInstance()
-        val notesCollection = firestore.collection(FireBaseString.NoteTable)
+        val snapShot = firestore.collection(FireBaseString.NoteDatabase)
+            .document(FirebaseAuth.getInstance().currentUser?.phoneNumber.toString()) // Access the user's document
+            .collection(FireBaseString.NoteTable)
+
         for(note in notes)
         {
-            notesCollection.document(note.primaryKey.toString()).delete()
+            snapShot.document(note.primaryKey.toString()).delete()
                 .addOnSuccessListener {
                     scope.launch {
                         noteDao.delete(notes)
@@ -196,6 +203,11 @@ class NoteRepository(val noteDao: NoteDao, val firestore:FirebaseFirestore) {
                     noteEvent.value = NoteEvent.Failure("Delete error ${e.message}")
                 }
         }
+    }
+
+    suspend fun deleteAllNotes()
+    {
+        noteDao.clearNotes()
     }
 
 }

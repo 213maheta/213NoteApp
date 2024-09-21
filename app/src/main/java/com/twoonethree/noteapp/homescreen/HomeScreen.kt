@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.dialog.ConfirmActionDialog
@@ -72,7 +73,7 @@ import com.twoonethree.noteapp.utils.toJson
 import kotlinx.coroutines.delay
 
 @Composable
-fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
+fun HomeScreen(navController: NavController, vm: HomeViewModel) {
 
     LaunchedEffect(Unit) {
         vm.getAllNotes()
@@ -116,18 +117,18 @@ fun HomeScreen(navigateTo: (String) -> Unit, vm: HomeViewModel) {
                 deleteNote = { vm.isDeleteDialogShow.value = true },
                 isLongPress = vm.isLongPress,
                 onSortClick,
-                navigateTo,
+                navController,
                 vm::syncNotesToFirestore,
                 vm.unSyncedData)
 
             Box(modifier = Modifier.fillMaxSize())
             {
-                NoteListView(vm.noteList, vm.isLongPress, navigateTo)
+                NoteListView(vm.noteList, vm.isLongPress, navController)
             }
         }
 
         FloatingActionButton(
-            onClick = { navigateTo(ScreenName.AddNoteScreen) },
+            onClick = {navController.navigate(ScreenName.AddNoteScreen)},
             shape = RectangleShape,
             containerColor = Color.Red,
             contentColor = Color.White,
@@ -163,7 +164,7 @@ fun TopBar(
     deleteNote: () -> Unit,
     isLongPress: MutableState<Boolean>,
     showSortDialog: () -> Unit,
-    navigateTo: (String) -> Unit,
+    navController: NavController,
     sync: () -> Unit,
     unSyncedData: MutableState<Boolean>
 )
@@ -214,7 +215,7 @@ fun TopBar(
                 }
             }
         }
-        IconButton(onClick = {navigateTo(ScreenName.ProfileScreen)}) {
+        IconButton(onClick = {navController.navigate(ScreenName.ProfileScreen)}) {
             Icon(
                 imageVector = Icons.Default.Face,
                 contentDescription = "Delete",
@@ -228,7 +229,7 @@ fun TopBar(
 fun NoteListView(
     noteList: List<NoteModel>,
     onLongPress: MutableState<Boolean>,
-    navigate: (String) -> Unit
+    navController: NavController
 ) {
 
     if(noteList.isEmpty())
@@ -257,13 +258,13 @@ fun NoteListView(
 
     LazyVerticalGrid(modifier = Modifier.fillMaxSize(), columns = GridCells.Fixed(2)) {
         items(noteList, key = { it.primaryKey }) {
-            NoteItem(it, onLongPress, navigate)
+            NoteItem(it, onLongPress, navController)
         }
     }
 }
 
 @Composable
-fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate: (String) -> Unit) {
+fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navController: NavController) {
 
     Column(
         modifier = Modifier
@@ -334,7 +335,7 @@ fun NoteItem(noteModel: NoteModel, onLongPress: MutableState<Boolean>, navigate:
                 .fillMaxWidth()
         )
 
-        IconButton(onClick = {navigate(ScreenName.AddNoteScreen + "/${toJson(noteModel)}")}) {
+        IconButton(onClick = {navController.navigate(ScreenName.AddNoteScreen + "/${toJson(noteModel)}")}) {
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Delete",

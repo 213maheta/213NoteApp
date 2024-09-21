@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.twoonethree.noteapp.R
 import com.twoonethree.noteapp.dialog.CircularProgressBarExample
 import com.twoonethree.noteapp.sealed.Authentication
@@ -30,7 +31,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun LoginScreen(
     vm: AuthenticationViewModel = koinViewModel(),
-    navigateTo: (String) -> Unit
+    navController: NavController
 ) {
     val context = LocalContext.current as Activity
     val isMessageBoxShow = remember{ mutableStateOf(false) }
@@ -50,7 +51,10 @@ fun LoginScreen(
                 vm.messageBox.value = "Invalid Mobile Number"
             }
             Authentication.OTPSent -> {
-                navigateTo(ScreenName.OTPScreen)
+                vm.authentication.value = Authentication.Empty
+                navController.navigate(ScreenName.OTPScreen){
+
+                }
                 context.showToast("OTP sent")
             }
             else -> Unit

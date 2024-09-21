@@ -40,14 +40,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.twoonethree.noteapp.composeutils.ColorBottomSheet
 import com.twoonethree.noteapp.model.NoteModel
 import com.twoonethree.noteapp.utils.ColorProvider
@@ -55,9 +54,8 @@ import com.twoonethree.noteapp.utils.toDp
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun AddNoteScreen(vm : AddNoteViewModel = koinViewModel(), noteModel: NoteModel?, popup:() -> Boolean) {
+fun AddNoteScreen(vm : AddNoteViewModel = koinViewModel(), noteModel: NoteModel?, navController: NavController) {
 
     val context = LocalContext.current
 
@@ -87,7 +85,7 @@ fun AddNoteScreen(vm : AddNoteViewModel = koinViewModel(), noteModel: NoteModel?
                 .fillMaxWidth()
                 .height(100.toDp())
                 .background(color = Color.Red)
-        ) { TopAppBar(popup) }
+        ) { TopAppBar(navController = navController) }
 
         Box(
             modifier = Modifier
@@ -100,7 +98,7 @@ fun AddNoteScreen(vm : AddNoteViewModel = koinViewModel(), noteModel: NoteModel?
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-        ) { BottomBar(vm.changeColorSheet, vm::addNote, popup) }
+        ) { BottomBar(vm.changeColorSheet, vm::addNote, navController = navController) }
     }
 
     if (vm.showColorSheet.value) {
@@ -162,21 +160,21 @@ fun NoteTextField(noteDescription: MutableState<String>, noteTitle: MutableState
 
 
 @Composable
-fun BottomBar(changeColorSheet: (Boolean) -> Unit, addNote: () -> Unit, onDicardClick: () -> Boolean) {
+fun BottomBar(changeColorSheet: (Boolean) -> Unit, addNote: () -> Unit, navController: NavController) {
     Row(horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
     ) {
-        ButtonWithIcon(Icons.Default.Close, "Discard") { onDicardClick() }
+        ButtonWithIcon(Icons.Default.Close, "Discard") { navController.popBackStack() }
         ButtonWithIcon(Icons.Default.Face, "Color") { changeColorSheet(true) }
         ButtonWithIcon(Icons.Default.Done, "Done") { addNote() }
     }
 }
 
 @Composable
-fun TopAppBar(popup: () -> Boolean) {
+fun TopAppBar(navController: NavController) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxSize()
@@ -188,7 +186,7 @@ fun TopAppBar(popup: () -> Boolean) {
             modifier = Modifier
                 .padding(start = 6.dp)
                 .clickable {
-                    popup()
+                    navController.popBackStack()
                 }
         )
     }

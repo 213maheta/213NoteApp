@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.twoonethree.noteapp.R
@@ -31,13 +33,14 @@ import com.twoonethree.noteapp.utils.toDp
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) -> Unit, popup:() -> Boolean) {
+fun ProfilePage(navController: NavController, vm : ProfileViewModel = koinViewModel()) {
 
     val context = LocalContext.current
     val onLogOutClick = remember{{vm.isLogoutDialogShow.value = true}}
     val onDeleteClick = remember{{vm.isDeleteDialogShow.value = true }}
     val onSyncClick =  remember{{vm.isSyncFromServer.value = true }}
     val onSyncConfirm =  remember{{vm.syncFromServer()}}
+    val clearNotes =  remember{{vm.clearNotes()}}
 
     LaunchedEffect(key1 = vm.noteRepository.noteEvent.value) {
         when(vm.noteRepository.noteEvent.value)
@@ -57,7 +60,7 @@ fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) ->
                 .fillMaxWidth()
                 .height(100.toDp())
                 .background(color = Color.Red)
-        ) { com.twoonethree.noteapp.addnote.TopAppBar(popup) }
+        ) { com.twoonethree.noteapp.addnote.TopAppBar(navController) }
 
         Column(
             verticalArrangement = Arrangement.Center,
@@ -90,11 +93,11 @@ fun ProfilePage(vm : ProfileViewModel = koinViewModel(), navigateTo: (String) ->
 
     if(vm.isLogoutDialogShow.value)
     {
-        LogoutWithConfirmation(navigateTo, onDismiss = { vm.isLogoutDialogShow.value = false })
+        LogoutWithConfirmation(navController = navController, onDismiss = { vm.isLogoutDialogShow.value = false }, clearNotes = clearNotes)
     }
     if(vm.isDeleteDialogShow.value)
     {
-        DeleteAccountWithConfirmation(navigateTo,onDismiss = { vm.isDeleteDialogShow.value = false })
+        DeleteAccountWithConfirmation(navController = navController,onDismiss = { vm.isDeleteDialogShow.value = false },      clearNotes = clearNotes)
     }
     if(vm.isSyncFromServer.value)
     {
@@ -110,6 +113,7 @@ fun ProfileInfo(currentUser: FirebaseUser?)
             .fillMaxWidth()
             .padding(4.dp)
             .border(width = 2.dp, color = Color.Red, shape = RoundedCornerShape(10.dp))
+            .clip(shape = RoundedCornerShape(10.dp))
             .background(color = Color.LightGray)
             .padding(4.dp)
     ) {
@@ -134,7 +138,7 @@ fun ProfileInfo(currentUser: FirebaseUser?)
                 text = currentUser?.phoneNumber?:"", // Replace with dynamic description
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.Gray,
+                color = Color.Black,
                 textAlign = TextAlign.Center
             )
         }
@@ -182,20 +186,31 @@ fun ProfileActionButton(onLogOutClick: () -> Unit, onDeleteClick: () -> Unit, on
 }
 
 @Composable
-fun LogoutWithConfirmation(navigateTo: (String) -> Unit, onDismiss: () -> Unit) {
+fun LogoutWithConfirmation(
+    navController: NavController,
+    onDismiss: () -> Unit,
+    clearNotes: () -> Unit
+) {
     ConfirmActionDialog(
         title = "Logout",
         message = "Are you sure you want to log out?",
         onConfirm = {
             FirebaseAuth.getInstance().signOut()
-            navigateTo(ScreenName.LogInScreen)
+            clearNotes()
+            navController.navigate(ScreenName.LogInScreen){
+                popUpTo(ScreenName.HomeScreen) { inclusive = true }
+            }
         },
         onDismiss = { onDismiss() }
     )
 }
 
 @Composable
-fun DeleteAccountWithConfirmation(navigateTo: (String) -> Unit, onDismiss: () -> Unit) {
+fun DeleteAccountWithConfirmation(
+    navController: NavController,
+    onDismiss: () -> Unit,
+    clearNotes: () -> Unit
+) {
 
     ConfirmActionDialog(
         title = "Delete Account",
@@ -205,9 +220,12 @@ fun DeleteAccountWithConfirmation(navigateTo: (String) -> Unit, onDismiss: () ->
             currentUser?.let { user ->
                 user.delete().addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        navigateTo(ScreenName.LogInScreen)
+                        clearNotes
+                        navController.navigate(ScreenName.LogInScreen){
+                            popUpTo(ScreenName.HomeScreen) { inclusive = true }
+                        }
                     } else {
-                        // Handle error
+
                     }
                 }
             }
